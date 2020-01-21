@@ -13,7 +13,7 @@ def get_songs():
 
     songs_all = []
 
-    for song in songs:
+    for i, song in enumerate(songs):
         song['first_cleaned'] = song_title_clean(song['first'])
         song['copyright'] = get_copyright(song['copy3'])
         song['sources'] = get_sources(song['id'])
@@ -29,6 +29,8 @@ def get_songs():
                 song['copyright']['ccli_title'] = ccli_details['title']
 
         songs_all.append(song)
+
+        print("PROGRESS: %s of %s" % (i + 1, len(songs)))
 
     return songs_all
 
