@@ -99,8 +99,8 @@ def search_ccli_number(song):
             title = title[:title.find(b'<')]
 
             return {
-                'title': title,
-                'ccli_number': id,
+                'title': title.decode("utf-8") ,
+                'ccli_number': id.decode("utf-8") ,
             }
     
     return False
@@ -111,7 +111,7 @@ def cleanhtml(raw_html):
     # I know this can be tricked, but for our purposes it doesn't matter
     cleanr = re.compile('<.*?>')
     cleantext = re.sub(cleanr, '', raw_html)
-    cleantext = cleantext.replace("&#160", " ")
+    cleantext = cleantext.replace("&#160;", " ")
     cleantext = cleantext.replace("  ", " ")
     cleantext = cleantext.strip()
     return cleantext
