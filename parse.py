@@ -133,6 +133,7 @@ def song_text_parse(text):
     text_lines_original = text.split("\n")
 
     start_new_block = True
+    has_verse_1 = False
 
     lyric_blocks = []
 
@@ -158,6 +159,13 @@ def song_text_parse(text):
             if '<span fontStyle="italic">' in text_lines_original[i]:
                 type = 'chorus'
 
+            if type == 'verse' and verse == 1:
+                if has_verse_1 is True:
+                    type = 'bridge'
+                    verse = '1'
+
+                has_verse_1 = True
+
             lyric_blocks.append({
                 "type": type,
                 "number": verse,
@@ -168,6 +176,9 @@ def song_text_parse(text):
 
         if line == '':
             start_new_block = True
+            continue
+
+        if line == '(Repeat)':
             continue
 
         # Remove punctuation from the end of every line
@@ -202,7 +213,7 @@ def song_create_file(song):
     file.write("CCLI NUMBER: " + str(song['copyright']['ccli_number']) + "\r\n")
     file.write("CCLI TITLE: " + str(song['copyright']['ccli_title']) + "\r\n")
     file.write("AUTHOR: " + ", ".join(authors) + "\r\n")
-    file.write("INFO: " + str(song['about'].replace("\r", "").replace("\n", "\\n").replace("\t", " ")) + "\r\n")
+    file.write("INFO: " + str(song['about'].replace("\r", " ").replace("\n", " ").replace("\t", " ")) + "\r\n")
     file.write("\r\n\r\n")
 
     for block in song['text_parsed']:
