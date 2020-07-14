@@ -1,7 +1,9 @@
 import os, sys
 import io
 import PyRTF.Elements
+import html
 import pro6
+import xml.etree.ElementTree as Xml
 
 def get_songs():
     # Returns a list of filenames for songs that can be processed
@@ -103,7 +105,10 @@ def read_song_file(filename):
 def create_pro6_doc(data):
     # Create a new document
     doc = pro6.document.presentation.PresentationDocument("Song", 1080, 1920, CCLISongTitle = data['ccli_title'], CCLISongNumber = data['ccli_number'], CCLIAuthor = data['author'])
-    doc.notes = data['info']
+
+    # Create a null group at the beginning - arrangements won't work properly without this
+    group = pro6.document.group.SlideGroup('', '1 1 1 0')
+    doc.append(group)
 
     # Create a blank slide at the beginning
     group = pro6.document.group.SlideGroup('Blank', '1 1 1 0')
@@ -191,7 +196,13 @@ def create_pro6_doc(data):
                 if line.strip() != '':
                     these_lines.append(line.strip())
 
-            textbox.rtf = DEFAULT_RTF.replace("<<<TEXTPLACEHOLDER>>>", "\\\n".join(these_lines)).encode('utf-8')
+            print(these_lines)
+            text_fixed = u"\n".join(these_lines)
+            text_fixed = text_fixed.replace("\r", "")
+            text_fixed = html.unescape(text_fixed)
+            text_fixed = ''.join([r'\u%s?' % str(ord(e)) for e in text_fixed])
+
+            textbox.rtf = DEFAULT_RTF.replace("<<<TEXTPLACEHOLDER>>>", text_fixed).encode('utf-8')
 
             # Add the textbox to the slide
             slide.elements.append(textbox)
@@ -210,9 +221,77 @@ def create_pro6_doc(data):
     group.slides.append(slide)
     doc.append(group)
 
+    # Setup default arrangement
+    doc = pro6_arrangement_create_default(doc)
+
     # Save the Pro6 file to disk
     filename_out = os.path.join("data/", data['filename'][:-4] + ".pro6")
     doc.write(filename_out)
+    return filename_out
+
+def pro6_arrangement_create_default(doc):
+    # Builds a default arrangement for this song, using simple logic that works for typical hymns
+
+    arrangement = []
+
+    chorus_uuid = None
+    verses_before_chorus = 0
+    verses_count = 0
+
+    # Build our arrangement as a list of group GUIDs
+    # Straight through until 1st chorus, then a chorus after each subsequent verse
+    for group_key, group in enumerate(doc.groups):
+
+        if 'uuid' not in group._attrib:
+            group._attrib['uuid'] = pro6.util.general.create_uuid().upper()
+
+        this_uuid = group._attrib['uuid']
+
+        # If a group doesn't have a name, don't put it into the arrangement
+        if group.name is None or group.name == "":
+            del doc.groups[group_key]
+            continue
+
+        # Insert the current verse
+        arrangement.append(this_uuid)
+
+        # Find the UUID of the Chorus
+        if group.name == "CHORUS 1":
+            chorus_uuid = this_uuid
+
+        # Determine how many verses between each chorus
+        if chorus_uuid is None and group.name[:5] == "VERSE":
+            verses_before_chorus += 1
+
+        elif group.name[:5] == "VERSE":
+            verses_count += 1
+
+        if verses_before_chorus == verses_count and chorus_uuid is not None:
+            # Insert the chorus
+            arrangement.append(chorus_uuid)
+            verses_count = 0
+
+    # Create the arrangement in the correct XML structure
+    uuid = pro6.util.general.create_uuid().upper()
+    arrangement_xml_groupids = []
+
+    for x in arrangement:
+        elem = Xml.Element("NSString", {})
+        elem.text = str(x)
+        arrangement_xml_groupids.append(elem)
+
+    arrangement_array = pro6.util.xmlhelp.create_array('groupIDs', arrangement_xml_groupids)
+    arrangements_container = Xml.Element("RVSongArrangement", {'color': '0 0 0 0', 'name': 'Default', 'uuid': uuid})    
+    arrangements_container.append(arrangement_array)
+    doc.arrangements.append(arrangements_container)
+
+    # The document needs a UUID, or else it rewrite all the other Group UUIDs
+    doc._attrib['uuid'] = pro6.util.general.create_uuid().upper()
+
+    # Set the default arrangement as 'selected'
+    doc._attrib['selectedArrangementID'] = uuid
+
+    return doc
 
 if __name__ == "__main__":
     songs = get_songs()

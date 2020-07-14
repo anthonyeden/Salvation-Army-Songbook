@@ -1,5 +1,6 @@
 sahb.sqlite
 pro6/
+data/songs.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
