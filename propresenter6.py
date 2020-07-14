@@ -205,6 +205,8 @@ def create_pro6_doc(data):
 
             text_fixed = u"\n".join(these_lines)
             text_fixed = text_fixed.replace("\r", "")
+            text_fixed = text_fixed.replace("ev'ry", "")
+            text_fixed = text_fixed.replace("&#232;", "e")
             text_fixed = html.unescape(text_fixed)
             text_fixed = ''.join([r'\u%s?' % str(ord(e)) for e in text_fixed])
 
