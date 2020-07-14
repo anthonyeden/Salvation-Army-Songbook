@@ -135,8 +135,15 @@ def create_pro6_doc(data):
 
             if len(line) > 28:
                 # Split!
-                middle_i = int(len(line) / 2) + 1
-                middle_space = line[middle_i:].find(" ")
+
+                if "; " in line:
+                    # Split on semi-colon
+                    middle_i = 0
+                    middle_space = line.find("; ")
+                else:
+                    # Split on a space near the middle
+                    middle_i = int(len(line) / 2) + 1
+                    middle_space = line[middle_i:].find(" ")
 
                 if middle_space <= 0:
                     middle_i = int(len(line) / 2) - 10
@@ -196,7 +203,6 @@ def create_pro6_doc(data):
                 if line.strip() != '':
                     these_lines.append(line.strip())
 
-            print(these_lines)
             text_fixed = u"\n".join(these_lines)
             text_fixed = text_fixed.replace("\r", "")
             text_fixed = html.unescape(text_fixed)
